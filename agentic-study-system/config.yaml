@@ -1,0 +1,73 @@
+# Agentic Study System — LLM routing map
+#
+# Each agent declares the ENGINE it runs on and the MODEL to use.
+#   engine: "api"    -> the "Heavy Lifter" (provider chosen by API_PROVIDER in .env:
+#                       anthropic | openai | vllm — vllm = self-hosted gpt-oss on tailab)
+#   engine: "ollama" -> the local "Fast Chatter"
+#
+# This single file is the deterministic router table. Change a model here and the
+# whole system follows — no code edits required.
+
+# Default model per API provider (used when an agent's model is "auto").
+api_models:
+  anthropic: claude-opus-4-7
+  openai: gpt-5.4-mini
+  vllm: gpt-oss-120b          # served-model-name on the tailab vLLM container
+
+# Per-agent routing. temperature is intentionally low for analytical agents
+# (determinism) and higher for the conversational pupil.
+agents:
+  # --- Phase 1: Knowledge Synthesis ---
+  ingestion:
+    engine: api
+    model: auto
+    temperature: 0.3
+    max_images: 10            # (vision path) cap slide page-images sent per tier — inert on text-only gpt-oss
+    ocr: true                 # OCR image-based or scanned PDF pages
+    ocr_langs: "chi_sim+eng"  # Tesseract language spec for Chinese course materials
+    ocr_min_chars: 40         # only OCR a page when its embedded text is sparser than this
+    max_tokens: 12000         # output budget per source/tier — higher for exhaustive coverage
+  web_explorer:                # picks diagram queries via api; images via Wikimedia Commons
+    engine: api
+    model: auto
+    temperature: 0.4
+    per_concept: 1             # images downloaded per concept
+    max_concepts: 4            # concepts pulled from a week's notes
+    timeout: 15               # seconds per Commons/image HTTP call
+  extension:
+    engine: api
+    model: auto
+    temperature: 0.35
+
+  # --- Phase 2: Retention ---
+  quiz:
+    engine: api
+    model: auto
+    temperature: 0.4
+    # Target question counts per tier (the prompt format is a TEMPLATE, not a quantity).
+    beginner: 20             # MCQ / cloze / short-definition mix
+    intermediate: 10         # application + logic problems
+    interleaved: 4           # prior-week review questions (only when prior weeks exist)
+    essays: 3                # Advanced synthesis essay prompts (not auto-checked)
+  grader:
+    engine: api
+    model: auto
+    temperature: 0.2
+
+  # --- Competition personalization layer ---
+  profile_builder:
+    engine: api
+    model: auto
+    temperature: 0.2
+  path_planner:
+    engine: api
+    model: auto
+    temperature: 0.25
+  rag_tutor:
+    engine: api
+    model: auto
+    temperature: 0.2
+
+# Bounded re-prompt loop for deterministic rule enforcement.
+validation:
+  max_retries: 2

@@ -1,0 +1,32 @@
+# Agentic Study System — dependencies
+# API engines (provider-agnostic router supports either/both)
+anthropic>=0.39
+openai>=1.40
+
+# Local engine
+ollama>=0.3
+
+# PDF ingestion (Phase 1): text extraction + page->image rendering
+pymupdf>=1.24
+
+# OCR for image-based slides (Phase 1). REQUIRES the Tesseract binary + Korean
+# language data installed at the system level:  brew install tesseract tesseract-lang
+pytesseract>=0.3
+pillow>=10.0
+
+# Config + environment
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# Web exploration sub-agent (Phase 1)
+requests>=2.31
+
+# Web interface (the study launcher)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+
+# Optional: LightRAG knowledge graph RAG server
+# After installing, run: python -m lightrag.api.lightrag_server --host 127.0.0.1 --port 9621
+# Requires Ollama with nomic-embed-text: ollama pull nomic-embed-text
+lightrag-hku[api]>=1.3

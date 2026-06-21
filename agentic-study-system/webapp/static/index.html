@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个性化学习多智能体系统</title>
+  <link rel="stylesheet" href="/static/style.css?v=20260621-cn-cockpit2" />
+</head>
+<body>
+  <header>
+    <div class="brand-block">
+      <h1>个性化学习资源生成与多智能体辅导系统</h1>
+      <p>面向高校课程的学习画像、资源生成、路径规划与知识问答一体化平台</p>
+    </div>
+    <div class="top-tags">
+      <span>学习画像</span>
+      <span>多智能体协同</span>
+      <span>检索防幻觉</span>
+    </div>
+    <span id="provider" class="pill"></span>
+  </header>
+
+  <main>
+    <!-- LEFT: study cockpit -->
+    <section id="sidebar">
+      <div class="cockpit-hero">
+        <div>
+          <span class="eyebrow">学习工作台</span>
+          <h2 class="first">课程驾驶舱</h2>
+          <p>围绕一个课程完成资料接入、资源生成、测评反馈与辅导追踪。</p>
+        </div>
+      </div>
+
+      <div class="course-console">
+        <label class="console-label" for="subject-select">当前课程</label>
+        <select id="subject-select" class="mini-select" title="当前课程"></select>
+        <div id="subject-bar" class="console-actions">
+          <button id="subject-new" class="mini primary" title="新建课程">新建</button>
+          <button id="subject-rename" class="mini" title="重命名课程">改名</button>
+          <button id="subject-delete" class="mini danger" title="删除课程">删除</button>
+        </div>
+      </div>
+
+      <div class="pipeline-block">
+        <div class="block-title">
+          <span>资料接入</span>
+          <small>PDF 上传后会自动生成新的章节</small>
+        </div>
+        <div id="dropzone">
+          <div class="upload-symbol">文档</div>
+          <div>
+            <strong>导入课程资料</strong>
+            <span>点击选择或拖入课程文档，系统会自动建章节</span>
+          </div>
+          <input type="file" id="fileinput" accept="application/pdf" multiple hidden />
+        </div>
+      </div>
+
+      <div class="unit-block">
+        <div class="block-title">
+          <span>章节流程</span>
+        </div>
+        <div id="weeks-bar" class="bulk-bar hidden"></div>
+        <ul id="weeks" class="list unit-flow"></ul>
+      </div>
+    </section>
+
+    <!-- RIGHT: workspace -->
+    <section id="content">
+      <div id="tabs">
+        <button data-view="viewer" class="tab active">资源中心</button>
+        <button data-view="quiz" class="tab">智能测评</button>
+        <button data-view="rag" class="tab">知识问答</button>
+        <button data-view="personalization" class="tab">学习画像</button>
+        <button id="open-diagnostic" class="tab ghost">学习诊断</button>
+      </div>
+
+      <div id="viewer" class="view active">
+        <section id="recommendations" class="recommendations hidden"></section>
+        <div id="viewer-title" class="muted">请在左侧选择课程资料、生成笔记、题库或诊断报告进行查看。</div>
+        <article id="viewer-body" class="markdown"></article>
+      </div>
+
+      <div id="quiz" class="view">
+        <div id="quiz-header" class="muted">请从左侧打开某一章节的 <strong>智能测评</strong>。</div>
+        <div id="quiz-empty" class="muted hidden">
+          当前章节还没有题库。<button id="quiz-generate" class="mini primary">生成题库</button>
+        </div>
+        <div id="quiz-body" class="hidden">
+          <div id="quiz-toolbar">
+            <span id="quiz-score" class="qz-score muted"></span>
+            <span class="grow"></span>
+            <button id="quiz-checkall" class="mini">检查客观题</button>
+            <button id="quiz-reset" class="mini ghost">重置</button>
+          </div>
+          <div id="quiz-list"></div>
+          <div class="actions">
+            <button id="quiz-grade" class="mini primary">提交深度反馈</button>
+            <span class="muted qz-hint">系统会分析开放题和论述题中的知识短板。</span>
+          </div>
+          <article id="quiz-feedback" class="markdown qz-feedback"></article>
+          <h3 class="qz-h">综合论述题</h3>
+          <textarea id="quiz-essay" class="qz-area" spellcheck="false"
+            placeholder="请在这里完成综合论述，作为学习测评的开放题作答。"></textarea>
+          <div class="actions"><button id="quiz-essay-save" class="mini">保存论述</button></div>
+        </div>
+      </div>
+
+      <div id="rag" class="view">
+        <div class="rag-panel">
+          <div class="rag-head">
+            <div>
+              <h2>基于课程资料的知识问答</h2>
+              <p id="rag-status" class="muted">配置 LightRAG 时使用增强检索，否则使用本地课程资料检索。</p>
+            </div>
+            <select id="rag-mode" class="mini-select">
+              <option value="mix">mix</option>
+              <option value="hybrid">hybrid</option>
+              <option value="local">local</option>
+              <option value="global">global</option>
+              <option value="naive">naive</option>
+            </select>
+          </div>
+          <textarea id="rag-question" class="rag-question" placeholder="请输入与当前课程资料相关的问题，例如：请解释本周知识点之间的联系。"></textarea>
+          <div class="actions">
+            <button id="rag-ask" class="mini primary">提问</button>
+            <button id="rag-index-week" class="mini">索引全部课程资料</button>
+          </div>
+          <div id="rag-index-status" class="rag-index-status hidden"></div>
+          <article id="rag-answer" class="markdown rag-answer"></article>
+        </div>
+      </div>
+
+      <div id="personalization" class="view">
+        <div class="personal-header">
+          <div>
+            <h2>学习画像与个性化路径</h2>
+            <p class="muted">在下方填写个人信息，或在访谈记录框里用自然语言描述，点击"从访谈记录提取画像"让 AI 自动归纳。画像填好后可生成个性化学习计划。</p>
+          </div>
+          <div class="personal-actions">
+            <button id="profile-load" class="mini">加载画像</button>
+            <button id="profile-save" class="mini">保存画像</button>
+            <button id="profile-build" class="mini primary">从访谈记录提取画像</button>
+            <button id="path-generate" class="mini">生成个性化学习计划</button>
+            <button id="path-open" class="mini ghost">查看学习计划</button>
+          </div>
+        </div>
+
+        <div class="profile-grid">
+          <label>专业背景<input id="profile-major" class="profile-input" /></label>
+          <label>年级/层次<input id="profile-grade" class="profile-input" /></label>
+          <label>目标课程<input id="profile-course" class="profile-input" /></label>
+          <label>学习目标<input id="profile-goal" class="profile-input" /></label>
+          <label>时间投入<input id="profile-time" class="profile-input" /></label>
+          <label>知识基础<input id="profile-knowledge" class="profile-input" /></label>
+          <label>认知风格<input id="profile-style" class="profile-input" /></label>
+          <label>知识短板<input id="profile-weak" class="profile-input" /></label>
+          <label>兴趣方向<input id="profile-interests" class="profile-input" /></label>
+          <label>资源偏好<input id="profile-resources" class="profile-input" /></label>
+          <label>测评偏好<input id="profile-assessment" class="profile-input" /></label>
+          <label>学习进度<input id="profile-progress" class="profile-input" /></label>
+        </div>
+
+        <label class="profile-notes-label">自然语言访谈记录 / 学习行为观察
+          <textarea id="profile-notes" class="profile-notes" spellcheck="false"
+            placeholder="例如：我是计算机专业大二学生，Python 基础一般，概率论薄弱，更喜欢图解、代码案例和分步骤例题，希望两周内掌握搜索算法和机器学习基础。"></textarea>
+        </label>
+        <article id="profile-preview" class="markdown profile-preview"></article>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+
+  <!-- Markdown + diagram rendering, vendored locally (works fully offline).
+       app.js falls back to <pre> if these ever fail to load. -->
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/mermaid.min.js"></script>
+  <script src="/static/app.js?v=20260621-cn-cockpit7"></script>
+</body>
+</html>

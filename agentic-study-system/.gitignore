@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+curriculum/**/input/*.pdf
+curriculum/**/assets/*
+!curriculum/**/assets/.gitkeep
+study/inbox/*.pdf
+!study/inbox/.gitkeep
+lightrag-data/
+lightrag.log
