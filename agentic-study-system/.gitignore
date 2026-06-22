@@ -1,8 +1,10 @@
 .env
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
 venv/
+build/
 curriculum/**/input/*.pdf
 curriculum/**/assets/*
 !curriculum/**/assets/.gitkeep

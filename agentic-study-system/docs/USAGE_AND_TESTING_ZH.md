@@ -3,10 +3,10 @@
 本文档面向比赛提交、队内交接和演示准备。项目主体位于：
 
 ```text
-E:\aistudy\agent\agentic-study-system
+agentic-study-system/
 ```
 
-`AI-Tutor` 不属于当前主系统运行链路。`LightRAG` 是可选外部 RAG 服务，主系统通过 HTTP 调用它；未部署 LightRAG 时，系统会自动回退到本地课程资料检索。
+`AI-Tutor` 不属于当前主系统运行链路。`LightRAG` 源码已内嵌在主项目中，主系统通过 HTTP 调用 LightRAG Server；未启动 LightRAG 时，系统会自动回退到本地课程资料检索。
 
 ## 1. 系统定位
 
@@ -51,7 +51,7 @@ E:\aistudy\agent\agentic-study-system
 进入主项目目录：
 
 ```powershell
-cd E:\aistudy\agent\agentic-study-system
+cd agentic-study-system
 ```
 
 创建虚拟环境：
@@ -296,10 +296,11 @@ EffectReport.md
 如果需要使用 LightRAG Server：
 
 ```powershell
-cd E:\aistudy\agent\LightRAG
+cd agentic-study-system
+.\scripts\start_lightrag.ps1
 ```
 
-按 LightRAG 官方说明创建环境并启动服务。常见端口为：
+脚本会使用主项目内嵌的 `LightRAG` 源码启动服务。常见端口为：
 
 ```text
 http://127.0.0.1:9621
@@ -316,7 +317,7 @@ LIGHTRAG_DEFAULT_MODE=mix
 再启动主系统：
 
 ```powershell
-cd E:\aistudy\agent\agentic-study-system
+cd agentic-study-system
 python main.py serve --port 8000
 ```
 
@@ -355,7 +356,7 @@ python main.py quiz --week 1 --subject introduction-to-computer-science
 步骤：
 
 ```powershell
-cd E:\aistudy\agent\agentic-study-system
+cd agentic-study-system
 .\.venv\Scripts\Activate.ps1
 python main.py serve --port 8000
 ```

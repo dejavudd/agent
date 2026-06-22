@@ -29,4 +29,4 @@ python-multipart>=0.0.9
 # Optional: LightRAG knowledge graph RAG server
 # After installing, run: python -m lightrag.api.lightrag_server --host 127.0.0.1 --port 9621
 # Requires Ollama with nomic-embed-text: ollama pull nomic-embed-text
-lightrag-hku[api]>=1.3
+-e ./LightRAG[api]

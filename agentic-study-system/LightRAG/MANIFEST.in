@@ -1,0 +1,2 @@
+recursive-include lightrag/api/static *
+recursive-include prompts/samples *

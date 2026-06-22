@@ -73,7 +73,7 @@
         <button data-view="quiz" class="tab">智能测评</button>
         <button data-view="rag" class="tab">知识问答</button>
         <button data-view="personalization" class="tab">学习画像</button>
-        <button id="open-diagnostic" class="tab ghost">学习诊断</button>
+        <button data-view="diagnostic" class="tab">学习诊断</button>
       </div>
 
       <div id="viewer" class="view active">
@@ -112,7 +112,6 @@
           <div class="rag-head">
             <div>
               <h2>基于课程资料的知识问答</h2>
-              <p id="rag-status" class="muted">配置 LightRAG 时使用增强检索，否则使用本地课程资料检索。</p>
               <p id="rag-server-status" class="muted">RAG 服务器：检测中...</p>
             </div>
             <select id="rag-mode" class="mini-select">
@@ -167,6 +166,19 @@
         </label>
         <article id="profile-preview" class="markdown profile-preview"></article>
       </div>
+
+      <div id="diagnostic" class="view">
+        <div class="diagnostic-panel">
+          <div class="diagnostic-head">
+            <div>
+              <h2>学习诊断</h2>
+              <p id="diagnostic-title" class="muted">Diagnostic.md</p>
+            </div>
+            <button id="diagnostic-refresh" class="mini">刷新</button>
+          </div>
+          <article id="diagnostic-body" class="markdown diagnostic-body"></article>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -177,6 +189,6 @@
   <script src="/static/vendor/marked.min.js"></script>
   <script src="/static/vendor/mermaid.min.js"></script>
   <script src="/static/chat.js"></script>
-  <script src="/static/app.js?v=20260621-cn-cockpit7"></script>
+  <script src="/static/app.js?v=20260622-diagnostic-tab"></script>
 </body>
 </html>

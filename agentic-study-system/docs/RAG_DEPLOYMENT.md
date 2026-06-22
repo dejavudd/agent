@@ -25,13 +25,19 @@ If you use official OpenAI or Anthropic, set `API_PROVIDER=openai` or `API_PROVI
 
 ## LightRAG Server Configuration
 
-The LightRAG repo is expected at:
+The LightRAG source is embedded at:
 
 ```text
-E:\aistudy\agent\LightRAG
+agentic-study-system\LightRAG
 ```
 
-Create `E:\aistudy\agent\LightRAG\.env` from `env.example`, then set:
+Install it through the main project requirements:
+
+```powershell
+pip install -r requirements.txt
+```
+
+Configure the main project `.env`:
 
 ```env
 PORT=9621
@@ -56,14 +62,14 @@ Important: embedding model and dimension must be fixed before indexing. If you c
 1. Start LightRAG Server:
 
 ```powershell
-cd E:\aistudy\agent\LightRAG
-.\.venv\Scripts\lightrag-server.exe --port 9621
+cd agentic-study-system
+.\scripts\start_lightrag.ps1
 ```
 
 2. Start the study system:
 
 ```powershell
-cd E:\aistudy\agent\agentic-study-system
+cd agentic-study-system
 .\.venv\Scripts\python.exe main.py serve --port 8000
 ```
 
@@ -81,5 +87,5 @@ The main app calls:
 - `POST /api/rag/index-week` - uploads current week files to LightRAG when available.
 - `POST /api/rag/ask` - calls LightRAG `/query`; falls back locally when unavailable.
 
-The main app does not require LightRAG to be installed in the same Python process.
+The main app talks to LightRAG over HTTP; the server source is kept inside this repository under `LightRAG`.
 

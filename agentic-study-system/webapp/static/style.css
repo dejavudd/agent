@@ -602,9 +602,27 @@ button.danger:hover:not(:disabled) {
 
 .rec-card { border-top: 1px solid #e3edf7; }
 .rag-head h2,
-.personal-header h2 {
+.personal-header h2,
+.diagnostic-head h2 {
   color: #16395e;
   font-size: 20px;
+}
+
+.diagnostic-panel { max-width: 960px; }
+.diagnostic-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.diagnostic-head h2 { margin: 0 0 4px; }
+.diagnostic-head p { margin: 0; }
+.diagnostic-body {
+  background: #f8fbff;
+  border: 1px solid #dbe6f3;
+  border-radius: 12px;
+  padding: 8px 22px 20px;
 }
 
 .profile-grid {

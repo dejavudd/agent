@@ -126,12 +126,6 @@ async function refresh() {
   state = await api("/api/state");
   const ragMode = state.rag && state.rag.mode ? state.rag.mode : "local";
   $("#provider").textContent = `模型接口：${state.api_provider} | 检索模式：${ragMode}`;
-  const ragStatus = $("#rag-status");
-  if (ragStatus) {
-    ragStatus.textContent = state.rag && state.rag.ok
-      ? "LightRAG 服务已连接，当前使用增强检索。"
-      : "LightRAG 未配置或不可用，当前使用本地课程资料检索。";
-  }
   updateRagServerStatus();
   renderSubjects(); renderWeeks(); renderRecommendations();
 }
@@ -521,10 +515,18 @@ function rewriteAssetImages(container, week) {
 }
 
 async function openDiagnostic() {
-  showView("viewer");
-  $("#viewer-title").textContent = "学习诊断报告 Diagnostic.md";
-  const md = await (await fetch("/api/diagnostic")).text();
-  renderMarkdown($("#viewer-body"), md);
+  showView("diagnostic");
+  $("#diagnostic-title").textContent = "Diagnostic.md";
+  const body = $("#diagnostic-body");
+  body.textContent = "正在加载学习诊断...";
+  try {
+    const res = await fetch("/api/diagnostic");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const md = await res.text();
+    await renderMarkdown(body, md);
+  } catch (e) {
+    body.textContent = "学习诊断加载失败：" + e.message;
+  }
 }
 
 // ---------------------------------------------------------- personalization
@@ -943,10 +945,12 @@ function wireUpload() {
 
 // --------------------------------------------------------------------- init
 document.querySelectorAll(".tab[data-view]").forEach((t) => t.onclick = () => {
-  showView(t.dataset.view);
-  if (t.dataset.view === "personalization" && !profileState) loadProfile();
+  const view = t.dataset.view;
+  if (view === "diagnostic") return openDiagnostic();
+  showView(view);
+  if (view === "personalization" && !profileState) loadProfile();
 });
-$("#open-diagnostic").onclick = openDiagnostic;
+$("#diagnostic-refresh").onclick = openDiagnostic;
 $("#profile-load").onclick = loadProfile;
 $("#profile-save").onclick = (e) => saveProfile(e.currentTarget);
 $("#profile-build").onclick = (e) => buildProfile(e.currentTarget);
