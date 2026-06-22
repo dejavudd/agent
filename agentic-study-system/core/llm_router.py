@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import base64
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, AsyncIterator, Iterable, Iterator, Union
 
 from core.config import Settings
 
@@ -85,25 +85,29 @@ class LLMRouter:
         system: str | None = None,
         temperature: float = 0.4,
         max_tokens: int = 4096,
-    ) -> str:
-        """Send a chat completion and return the assistant text.
+        stream: bool = False,
+    ) -> Union[str, Iterator[str]]:
+        """Send a chat completion and return the assistant text or stream.
 
         `engine` is concrete ("anthropic" | "openai" | "vllm" | "ollama") — the
         logical "api" alias is already resolved in core.config.
+
+        When `stream=True`, returns an Iterator[str] yielding response chunks.
+        When `stream=False` (default), returns the complete response as a string.
         """
         messages = list(messages)
         if engine == "anthropic":
-            return self._chat_anthropic(messages, model, system, temperature, max_tokens)
+            return self._chat_anthropic(messages, model, system, temperature, max_tokens, stream)
         if engine == "openai":
-            return self._chat_openai(messages, model, system, temperature, max_tokens)
+            return self._chat_openai(messages, model, system, temperature, max_tokens, stream)
         if engine == "vllm":
-            return self._chat_vllm(messages, model, system, temperature, max_tokens)
+            return self._chat_vllm(messages, model, system, temperature, max_tokens, stream)
         if engine == "ollama":
-            return self._chat_ollama(messages, model, system, temperature)
+            return self._chat_ollama(messages, model, system, temperature, stream)
         raise LLMError(f"Unknown engine '{engine}'.")
 
     # --------------------------------------------------------------- anthropic
-    def _chat_anthropic(self, messages, model, system, temperature, max_tokens) -> str:
+    def _chat_anthropic(self, messages, model, system, temperature, max_tokens, stream) -> Union[str, Iterator[str]]:
         if not self.settings.anthropic_api_key:
             raise LLMError(
                 "ANTHROPIC_API_KEY is not set. Add it to .env "
@@ -120,16 +124,31 @@ class LLMRouter:
             self._anthropic = anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
 
         try:
-            resp = self._anthropic.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                system=system or "",
-                messages=self._to_anthropic(messages),
-            )
+            if stream:
+                # Streaming mode
+                with self._anthropic.messages.stream(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system or "",
+                    messages=self._to_anthropic(messages),
+                ) as stream_manager:
+                    def _stream_generator():
+                        for text in stream_manager.text_stream:
+                            yield text
+                    return _stream_generator()
+            else:
+                # Non-streaming mode
+                resp = self._anthropic.messages.create(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=system or "",
+                    messages=self._to_anthropic(messages),
+                )
+                return "".join(block.text for block in resp.content if block.type == "text")
         except Exception as exc:  # noqa: BLE001 - surface a clean hint
             raise LLMError(_api_error_hint("Anthropic", exc)) from exc
-        return "".join(block.text for block in resp.content if block.type == "text")
 
     @staticmethod
     def _to_anthropic(messages: list[Message]) -> list[dict]:
@@ -150,7 +169,7 @@ class LLMRouter:
         return out
 
     # ------------------------------------------------------------------ openai
-    def _chat_openai(self, messages, model, system, temperature, max_tokens) -> str:
+    def _chat_openai(self, messages, model, system, temperature, max_tokens, stream) -> Union[str, Iterator[str]]:
         if not self.settings.openai_api_key:
             raise LLMError(
                 "OPENAI_API_KEY is not set. Add it to .env "
@@ -178,10 +197,20 @@ class LLMRouter:
                 temperature=temperature,
                 max_tokens=max_tokens,
                 messages=full,
+                stream=stream,
             )
+            if stream:
+                # Streaming mode
+                def _stream_generator():
+                    for chunk in resp:
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                return _stream_generator()
+            else:
+                # Non-streaming mode
+                return resp.choices[0].message.content or ""
         except Exception as exc:  # noqa: BLE001 - surface a clean hint
             raise LLMError(_api_error_hint("OpenAI", exc)) from exc
-        return resp.choices[0].message.content or ""
 
     @staticmethod
     def _to_openai(messages: list[Message]) -> list[dict]:
@@ -202,7 +231,7 @@ class LLMRouter:
         return out
 
     # -------------------------------------------------------------------- vllm
-    def _chat_vllm(self, messages, model, system, temperature, max_tokens) -> str:
+    def _chat_vllm(self, messages, model, system, temperature, max_tokens, stream) -> Union[str, Iterator[str]]:
         """Self-hosted, OpenAI-compatible endpoint (e.g. gpt-oss served by vLLM).
 
         Reuses the OpenAI SDK pointed at `vllm_base_url`. gpt-oss is text-only,
@@ -230,14 +259,24 @@ class LLMRouter:
                 temperature=temperature,
                 max_tokens=max_tokens,
                 messages=full,
+                stream=stream,
             )
+            if stream:
+                # Streaming mode
+                def _stream_generator():
+                    for chunk in resp:
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                return _stream_generator()
+            else:
+                # Non-streaming mode
+                return resp.choices[0].message.content or ""
         except Exception as exc:  # noqa: BLE001 - surface a clean hint
             raise LLMError(
                 f"vLLM chat failed for model '{model}' at "
                 f"{self.settings.vllm_base_url}: {exc}. Is the SSH tunnel open "
                 f"and the container running? (see scripts/tailab_tunnel.sh)"
             ) from exc
-        return resp.choices[0].message.content or ""
 
     @staticmethod
     def _to_text_only(messages: list[Message]) -> list[dict]:
@@ -252,7 +291,7 @@ class LLMRouter:
         return out
 
     # ------------------------------------------------------------------ ollama
-    def _chat_ollama(self, messages, model, system, temperature) -> str:
+    def _chat_ollama(self, messages, model, system, temperature, stream) -> Union[str, Iterator[str]]:
         try:
             import ollama
         except ModuleNotFoundError as exc:
@@ -270,13 +309,23 @@ class LLMRouter:
                 model=model,
                 messages=full,
                 options={"temperature": temperature},
+                stream=stream,
             )
+            if stream:
+                # Streaming mode
+                def _stream_generator():
+                    for chunk in resp:
+                        if chunk.get("message", {}).get("content"):
+                            yield chunk["message"]["content"]
+                return _stream_generator()
+            else:
+                # Non-streaming mode
+                return resp["message"]["content"]
         except Exception as exc:  # noqa: BLE001 - surface a clean hint
             raise LLMError(
                 f"Ollama chat failed for model '{model}': {exc}. "
                 f"Is the server running at {self.settings.ollama_host}?"
             ) from exc
-        return resp["message"]["content"]
 
     def _assert_ollama_ready(self, model: str) -> None:
         """Fail fast with a fix hint if the server is down or model unpulled."""

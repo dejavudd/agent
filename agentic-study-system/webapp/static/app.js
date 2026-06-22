@@ -132,7 +132,29 @@ async function refresh() {
       ? "LightRAG 服务已连接，当前使用增强检索。"
       : "LightRAG 未配置或不可用，当前使用本地课程资料检索。";
   }
+  updateRagServerStatus();
   renderSubjects(); renderWeeks(); renderRecommendations();
+}
+
+async function updateRagServerStatus() {
+  const el = $("#rag-server-status");
+  if (!el) return;
+  try {
+    const s = await api("/api/rag/status");
+    if (!s.configured) {
+      el.textContent = "RAG 服务器：未配置 LIGHTRAG_BASE_URL";
+      el.style.color = "#999";
+    } else if (s.error) {
+      el.textContent = `RAG 服务器：离线（${s.error}）`;
+      el.style.color = "#c0392b";
+    } else {
+      el.textContent = `RAG 服务器：在线 ✓  已处理 ${s.processed || 0} 篇 · 待处理 ${(s.pending || 0) + (s.processing || 0)} 篇`;
+      el.style.color = "#27ae60";
+    }
+  } catch (e) {
+    el.textContent = "RAG 服务器：检测失败";
+    el.style.color = "#c0392b";
+  }
 }
 
 // --------------------------------------------------------------- subjects
@@ -601,20 +623,12 @@ async function openPath(name) {
 }
 
 // ------------------------------------------------------------------ rag tutor
+// NOTE: RAG chat now uses WebSocket streaming (see chat.js)
+// This function is kept for backward compatibility but will be replaced by WebSocket
 async function askRag(btn) {
-  const question = $("#rag-question").value.trim();
-  if (!question) { toast("请先输入问题。"); return; }
-  $("#rag-answer").innerHTML = "";
-  try {
-    const result = await withSpinner(btn, () => api("/api/rag/ask", jsonBody({
-      question,
-      mode: $("#rag-mode").value || "mix",
-    })));
-    const sources = (result.sources || []).map((s, i) => `- [${i + 1}] ${s.source || JSON.stringify(s)} ${s.score ? `（相关度 ${s.score}）` : ""}`).join("\n");
-    const md = `${result.answer || ""}${sources ? "\n\n## 参考来源\n" + sources : ""}`;
-    await renderMarkdown($("#rag-answer"), md);
-    await refresh();
-  } catch (e) { toast("知识问答失败：" + e.message); }
+  // Streaming chat is now handled by chat.js via WebSocket
+  // This function is deprecated and only used as fallback
+  console.warn('[RAG] askRag() is deprecated, use WebSocket streaming instead');
 }
 
 function setIndexStatus(cls, msg) {
@@ -938,7 +952,8 @@ $("#profile-save").onclick = (e) => saveProfile(e.currentTarget);
 $("#profile-build").onclick = (e) => buildProfile(e.currentTarget);
 $("#path-generate").onclick = (e) => generatePath(e.currentTarget);
 $("#path-open").onclick = () => openPath();
-$("#rag-ask").onclick = (e) => askRag(e.currentTarget);
+// NOTE: rag-ask is now handled by chat.js (WebSocket streaming)
+// $("#rag-ask").onclick = (e) => askRag(e.currentTarget);
 $("#rag-index-week").onclick = (e) => indexActiveWeek(e.currentTarget);
 $("#subject-select").onchange = (e) => { if (e.target.value) selectSubject(e.target.value); };
 $("#subject-new").onclick = newSubject;

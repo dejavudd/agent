@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>个性化学习多智能体系统</title>
   <link rel="stylesheet" href="/static/style.css?v=20260621-cn-cockpit2" />
+  <link rel="stylesheet" href="/static/chat.css" />
 </head>
 <body>
   <header>
@@ -112,18 +113,17 @@
             <div>
               <h2>基于课程资料的知识问答</h2>
               <p id="rag-status" class="muted">配置 LightRAG 时使用增强检索，否则使用本地课程资料检索。</p>
+              <p id="rag-server-status" class="muted">RAG 服务器：检测中...</p>
             </div>
             <select id="rag-mode" class="mini-select">
-              <option value="mix">mix</option>
-              <option value="hybrid">hybrid</option>
-              <option value="local">local</option>
-              <option value="global">global</option>
-              <option value="naive">naive</option>
+              <option value="mix">mix（全面）</option>
+              <option value="hybrid">hybrid（均衡）</option>
             </select>
           </div>
           <textarea id="rag-question" class="rag-question" placeholder="请输入与当前课程资料相关的问题，例如：请解释本周知识点之间的联系。"></textarea>
           <div class="actions">
             <button id="rag-ask" class="mini primary">提问</button>
+            <button id="rag-clear" class="mini ghost">清空对话</button>
             <button id="rag-index-week" class="mini">索引全部课程资料</button>
           </div>
           <div id="rag-index-status" class="rag-index-status hidden"></div>
@@ -176,6 +176,7 @@
        app.js falls back to <pre> if these ever fail to load. -->
   <script src="/static/vendor/marked.min.js"></script>
   <script src="/static/vendor/mermaid.min.js"></script>
+  <script src="/static/chat.js"></script>
   <script src="/static/app.js?v=20260621-cn-cockpit7"></script>
 </body>
 </html>

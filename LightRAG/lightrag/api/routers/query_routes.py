@@ -405,8 +405,9 @@ def create_query_routes(rag, api_key: Optional[str] = None, top_k: int = 60):
         try:
             param = request.to_query_params(
                 False
-            )  # Ensure stream=False for non-streaming endpoint
-            # Force stream=False for /query endpoint regardless of include_references setting
+            )  # Pass False to indicate this is the non-streaming /query endpoint
+            # /query endpoint is designed for non-streaming responses
+            # Use /query/stream for streaming responses instead
             param.stream = False
             # Unified approach: always use aquery_llm for both cases
             result = await rag.aquery_llm(request.query, param=param)

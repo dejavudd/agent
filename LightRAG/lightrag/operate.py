@@ -3945,7 +3945,8 @@ async def kg_query(
             stream=query_param.stream,
         )
 
-        if hashing_kv and hashing_kv.global_config.get("enable_llm_cache"):
+        # Only cache non-streaming responses to avoid issues with AsyncIterator serialization
+        if hashing_kv and hashing_kv.global_config.get("enable_llm_cache") and isinstance(response, str):
             queryparam_dict = {
                 "mode": query_param.mode,
                 "response_type": query_param.response_type,

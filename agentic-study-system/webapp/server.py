@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -633,6 +633,160 @@ async def grade(payload: dict) -> JSONResponse:
         "findings": result.findings,
         "file": result.feedback_path.name,
     })
+
+
+# ------------------------------------------------------------ WebSocket chat
+@app.websocket("/ws/chat")
+async def websocket_chat(websocket: WebSocket):
+    """Real-time streaming chat endpoint for RAG tutoring or general questions.
+
+    Client sends JSON: {"message": "...", "mode": "rag|chat", "context": {...}}
+    Server streams back text chunks as they arrive from the LLM.
+    """
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message = str(data.get("message", "")).strip()
+            mode = str(data.get("mode", "chat"))
+            rag_retrieval_mode = str(data.get("rag_mode") or settings.lightrag_default_mode or "mix")
+
+            if not message:
+                await websocket.send_json({"error": "Message cannot be empty"})
+                continue
+
+            # Safety check
+            safety = check_text(message, context="chat")
+            if not safety.ok:
+                await websocket.send_text(build_safety_notice(safety))
+                await websocket.send_json({"done": True})
+                continue
+
+            # Route the message
+            try:
+                if mode == "rag":
+                    # RAG tutoring mode - retrieve context first, then stream LLM response
+                    route = _route_for_optional_agent("rag_tutor")
+                    if route is None:
+                        route = settings.route("api")
+
+                    # Try LightRAG first, fall back to local retrieval
+                    client = LightRAGClient(settings.lightrag_base_url, settings.lightrag_api_key)
+                    context = ""
+                    sources = []
+
+                    try:
+                        if client.configured:
+                            # Use LightRAG for retrieval
+                            rag_result = await asyncio.to_thread(
+                                client.query,
+                                message,
+                                rag_retrieval_mode
+                            )
+                            context = rag_result.get("answer", "")
+                            sources = rag_result.get("sources", [])
+                        else:
+                            # Use local retrieval
+                            rag_result = await asyncio.to_thread(
+                                local_rag_answer,
+                                _subject_dir(),
+                                message,
+                                router,
+                                route
+                            )
+                            context = rag_result.get("answer", "")
+                            sources = rag_result.get("sources", [])
+                    except Exception as exc:
+                        # If retrieval fails, fall back to local
+                        rag_result = await asyncio.to_thread(
+                            local_rag_answer,
+                            _subject_dir(),
+                            message,
+                            router,
+                            route
+                        )
+                        context = rag_result.get("answer", "")
+                        sources = rag_result.get("sources", [])
+
+                    # Build prompt with retrieved context
+                    if context.strip():
+                        prompt = (
+                            f"Answer the student's question using the retrieved context below.\n\n"
+                            f"QUESTION: {message}\n\n"
+                            f"CONTEXT:\n{context}\n\n"
+                            f"Provide a clear, pedagogically sound answer. Cite sources as [1], [2] if applicable."
+                        )
+                    else:
+                        prompt = (
+                            f"The knowledge base doesn't have relevant information for this question: {message}\n\n"
+                            f"Please suggest which course materials should be indexed to answer this type of question."
+                        )
+
+                    messages = [{"role": "user", "content": prompt}]
+                    system = (
+                        "You are a helpful tutor. Answer questions based on the student's "
+                        "learning materials. Be clear, concise, and pedagogically sound."
+                    )
+
+                    # Stream the response
+                    response = router.chat(
+                        messages,
+                        engine=route.engine,
+                        model=route.model,
+                        system=system,
+                        temperature=route.temperature,
+                        stream=True,
+                    )
+
+                    # Yield chunks as they arrive
+                    for chunk in response:
+                        await websocket.send_text(chunk)
+
+                    # Send sources at the end if available
+                    if sources:
+                        source_text = "\n\n📚 参考来源:\n" + "\n".join(
+                            f"[{i+1}] {s.get('source', 'Unknown')}"
+                            for i, s in enumerate(sources[:5])
+                        )
+                        await websocket.send_text(source_text)
+
+                    await websocket.send_json({"done": True})
+                    log_event(_subject_dir(), "websocket_rag", {"question": message[:200]})
+                    _auto_profile_signal(f"WebSocket RAG question: {message[:160]}", "rag")
+
+                else:
+                    # General chat mode
+                    route = settings.route("api")
+                    messages = [{"role": "user", "content": message}]
+                    system = (
+                        "You are a helpful AI assistant for students. Provide clear, "
+                        "accurate, and educational responses."
+                    )
+
+                    # Stream the response
+                    response = router.chat(
+                        messages,
+                        engine=route.engine,
+                        model=route.model,
+                        system=system,
+                        temperature=route.temperature,
+                        stream=True,
+                    )
+
+                    for chunk in response:
+                        await websocket.send_text(chunk)
+
+                    await websocket.send_json({"done": True})
+                    log_event(_subject_dir(), "websocket_chat", {"message": message[:200]})
+
+            except LLMError as exc:
+                await websocket.send_json({"error": str(exc)})
+            except Exception as exc:
+                await websocket.send_json({"error": f"Unexpected error: {exc}"})
+
+    except WebSocketDisconnect:
+        pass  # Client disconnected, clean exit
+
 
 # Mount static assets last so /api takes precedence.
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

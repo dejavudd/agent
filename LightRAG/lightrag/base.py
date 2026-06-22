@@ -101,8 +101,8 @@ class QueryParam:
     response_type: str = "Multiple Paragraphs"
     """Defines the response format. Examples: 'Multiple Paragraphs', 'Single Paragraph', 'Bullet Points'."""
 
-    stream: bool = False
-    """If True, enables streaming output for real-time responses."""
+    stream: bool = True
+    """If True, enables streaming output for real-time responses. Default is True."""
 
     top_k: int = int(os.getenv("TOP_K", str(DEFAULT_TOP_K)))
     """Number of top items to retrieve. Represents entities in 'local' mode and relationships in 'global' mode."""

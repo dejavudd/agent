@@ -1,0 +1,39 @@
+# ── 密钥和本地配置 ──────────────────────────────────────────
+.env
+.env.backup.*
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# ── 运行时数据（不上传课程内容和 RAG 数据库）─────────────────
+
+# LightRAG server 数据库和上传缓存
+LightRAG/rag_storage/
+LightRAG/inputs/
+LightRAG/*.log
+
+# 学习系统：curriculum 全部为运行时数据，不上传
+agentic-study-system/curriculum/*
+!agentic-study-system/curriculum/.gitkeep
+
+# 收件箱（不跟踪待处理文件，保留占位符）
+agentic-study-system/study/inbox/*
+!agentic-study-system/study/inbox/.gitkeep
+
+# 日志
+agentic-study-system/*.log
+*.log
+
+# ── IDE / OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
